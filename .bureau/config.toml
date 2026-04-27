@@ -1,0 +1,17 @@
+[runtime]
+language    = "typescript"
+base_image  = "node:24-slim"
+install_cmd = "npm install"
+lint_cmd    = "npx eslint . --max-warnings 0"
+build_cmd   = "npx tsc --noEmit"
+test_cmd    = "npx vitest run"
+
+[ralph_loop]
+max_builder_attempts = 3
+max_rounds           = 3
+command_timeout      = 300
+
+[bureau]
+planner_model   = "claude-opus-4-7"
+builder_model   = "claude-sonnet-4-6"
+reviewer_model  = "claude-opus-4-7"

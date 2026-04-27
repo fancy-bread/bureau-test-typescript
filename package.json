@@ -1,0 +1,19 @@
+{
+  "name": "bureau-test-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "husky": "^9.1.7",
+    "typescript": "^5",
+    "typescript-eslint": "^8",
+    "vitest": "^2"
+  }
+}
