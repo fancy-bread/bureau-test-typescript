@@ -1,0 +1,52 @@
+name: PR Cleanup
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 1
+          days-before-close: 1
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          exempt-pr-labels: keep
+          stale-pr-message: >
+            This PR has been open without activity for 1 day and is being marked stale.
+            Add the `keep` label to exempt it, or it will be closed tomorrow.
+          close-pr-message: >
+            This PR was closed automatically after 1 day of inactivity in stale state.
+
+  delete-merged-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/branches \
+            --paginate \
+            --jq '.[] | select(.name != "main") | .name' | \
+          while read -r branch; do
+            merged=$(gh api "repos/${{ github.repository }}/git/refs/heads/$branch" \
+              --jq '.object.sha' 2>/dev/null) || continue
+            if gh pr list --head "$branch" --state merged --json number \
+              --jq '.[0].number' 2>/dev/null | grep -q .; then
+              gh api --method DELETE \
+                "repos/${{ github.repository }}/git/refs/heads/$branch" && \
+                echo "Deleted merged branch: $branch"
+            fi
+          done
