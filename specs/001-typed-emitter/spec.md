@@ -8,11 +8,11 @@
 
 ### User Story 1 — Subscribe and emit typed events (Priority: P1)
 
-A developer defines an event map (record of event names to payload types), creates an emitter typed to that map, registers a listener, and emits an event. TypeScript enforces the payload shape at the call site — wrong payload types are compile errors, not runtime errors.
+A developer defines an event map (a record of event names to payload shapes), creates an emitter typed to that map, registers a listener, and emits an event. The type system enforces the payload shape at the call site — a mismatched payload is a compile error, not a silent runtime bug.
 
 **Why this priority**: Core capability. Nothing else works without it.
 
-**Independent Test**: Construct a `TypedEmitter`, call `.on()` and `.emit()`, and assert the listener receives the correct payload. No other user story needed.
+**Independent Test**: Construct an emitter, call `.on()` and `.emit()`, assert the listener receives the correct payload. No other user story is needed to verify this works.
 
 **Acceptance Scenarios**:
 
@@ -43,7 +43,7 @@ A developer registers a listener that fires exactly once and then removes itself
 
 A developer removes a previously registered listener and can query how many listeners are currently registered for a given event.
 
-**Why this priority**: Necessary for memory-safe usage in long-running programs; enables assertion in tests.
+**Why this priority**: Necessary for memory-safe usage in long-running programs; enables deterministic assertion in tests.
 
 **Independent Test**: Register two listeners, call `.off()` on one, emit the event, assert only one listener fired. Assert `.listenerCount()` returns the expected number at each step.
 
@@ -56,38 +56,44 @@ A developer removes a previously registered listener and can query how many list
 
 ---
 
+### Edge Cases
+
+- What happens when `.emit()` is called before any listeners are registered?
+- What happens when the same listener function reference is passed to `.off()` multiple times?
+- What happens when `.once()` fires and then `.off()` is called with its reference?
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: `TypedEmitter<TEvents>` MUST be a generic class where `TEvents` extends `Record<string, unknown>`.
-- **FR-002**: `.on(event, listener)` MUST register a persistent listener; `event` MUST be constrained to `keyof TEvents` and `listener` payload MUST be typed as `TEvents[typeof event]`.
-- **FR-003**: `.once(event, listener)` MUST register a listener that auto-removes after first invocation; same type constraints as `.on()`.
-- **FR-004**: `.off(event, listener)` MUST remove the first matching listener reference; if the reference is not found, MUST be a no-op.
+- **FR-001**: The emitter MUST be generic, parameterised by an event map that constrains which event names and payload shapes are valid.
+- **FR-002**: `.on(event, listener)` MUST register a persistent listener; both the event name and listener payload MUST be type-checked against the event map.
+- **FR-003**: `.once(event, listener)` MUST register a listener that auto-removes itself after its first invocation; same type constraints as `.on()`.
+- **FR-004**: `.off(event, listener)` MUST remove the first matching listener reference; if the reference is not found, it MUST be a no-op.
 - **FR-005**: `.emit(event, payload)` MUST invoke all currently registered listeners for `event` in registration order, synchronously.
-- **FR-006**: `.listenerCount(event)` MUST return the number of currently active listeners (persistent + not-yet-fired once listeners) for `event`.
-- **FR-007**: The implementation MUST compile under `strict: true` and `moduleResolution: NodeNext` with zero `any` escapes.
-- **FR-008**: The public API MUST be exported from `src/emitter.ts`; event-map type utilities (if any) MUST be co-located in `src/types.ts`.
+- **FR-006**: `.listenerCount(event)` MUST return the count of currently active listeners (persistent + not-yet-fired once listeners) for `event`.
+- **FR-007**: The implementation MUST compile without errors or type suppressions under strict compilation settings; no `any` escapes are permitted in implementation files.
+- **FR-008**: The public API and any type utilities MUST be in separate, focused source files; implementation internals MUST NOT be exported.
 
 ### Key Entities
 
-- **`EventMap`**: A `Record<string, unknown>` that maps event name strings to their payload types.
-- **`Listener<T>`**: `(payload: T) => void` — the callback signature for a single event.
-- **`TypedEmitter<TEvents>`**: The emitter class. Owns the internal listener registry.
+- **EventMap**: A record that maps event name strings to their corresponding payload types.
+- **Listener**: A callback `(payload) => void` whose argument type is derived from the event map.
+- **TypedEmitter**: The emitter class; owns the internal listener registry and enforces the event map contract.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: `vitest run` exits 0 with all scenarios from User Stories 1–3 covered by test cases.
-- **SC-002**: `tsc --noEmit` exits 0 — no type errors, no suppressions.
-- **SC-003**: `eslint . --max-warnings 0` exits 0.
-- **SC-004**: Intentionally passing a wrong payload type (e.g., `emit('ping', { id: 'notanumber' })`) produces a TypeScript compile error — verified by a `@ts-expect-error` assertion in the test file.
-- **SC-005**: No `any`, `as any`, or `@ts-ignore` appears in implementation files.
+- **SC-001**: All acceptance scenarios from User Stories 1–3 are covered by automated tests that pass when the test suite runs (`vitest run` exits 0).
+- **SC-002**: The codebase compiles with zero type errors and zero type suppressions (`tsc --noEmit` exits 0; no `any`, `as any`, or `@ts-ignore` in implementation files).
+- **SC-003**: Code style is consistent and passes automated linting with no warnings (`eslint . --max-warnings 0` exits 0).
+- **SC-004**: Passing a payload of the wrong type at the call site produces a compile-time error — verified by a `@ts-expect-error` assertion in the test file confirming the type system actively rejects misuse.
+- **SC-005**: The library has zero external runtime dependencies; only the test framework is a dev dependency.
 
 ## Assumptions
 
-- No external runtime dependencies. Only `vitest` (already installed) for tests.
-- Listeners are synchronous; async listeners are out of scope.
-- No maximum listener warning (unlike Node's `EventEmitter`) — out of scope.
-- Error thrown inside a listener propagates to the caller of `.emit()` — no swallowing, no isolation. Out-of-scope to handle per-listener errors.
+- Listeners are synchronous; async listeners are out of scope for this spec.
+- No maximum-listener warning (unlike Node's built-in EventEmitter) — out of scope.
+- An error thrown inside a listener propagates to the caller of `.emit()`; per-listener error isolation is out of scope.
+- SC-001–SC-004 intentionally reference specific tooling commands. This is required by the project constitution (Principle V: Verifiable Outputs; Quality Gates), which supersedes the generic speckit guideline that success criteria be tool-agnostic.
