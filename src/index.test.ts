@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { greet } from "./index.js";
+import { TypedEmitter } from "./index.js";
 
-describe("greet", () => {
-  it("returns a greeting", () => {
-    expect(greet("world")).toBe("Hello, world!");
+describe("index re-exports", () => {
+  it("exports TypedEmitter", () => {
+    expect(TypedEmitter).toBeDefined();
+    const emitter = new TypedEmitter<{ test: string }>();
+    expect(emitter).toBeInstanceOf(TypedEmitter);
   });
 });
