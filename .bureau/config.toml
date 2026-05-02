@@ -12,6 +12,5 @@ max_rounds           = 3
 command_timeout      = 300
 
 [bureau]
-planner_model   = "claude-opus-4-7"
 builder_model   = "claude-sonnet-4-6"
 reviewer_model  = "claude-opus-4-7"
