@@ -1,3 +1,2 @@
-export function greet(name: string): string {
-  return `Hello, ${name}!`;
-}
+export { TypedEmitter } from "./emitter.js";
+export type { EventMap, Listener } from "./types.js";

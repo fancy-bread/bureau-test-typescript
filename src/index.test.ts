@@ -1,8 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { greet } from "./index.js";
+// All feature tests are in emitter.test.ts
+// This file intentionally left empty — vitest requires at least one suite.
+import { describe, it } from "vitest";
 
-describe("greet", () => {
-  it("returns a greeting", () => {
-    expect(greet("world")).toBe("Hello, world!");
+describe("index re-exports", () => {
+  it("exports TypedEmitter", async () => {
+    const mod = await import("./index.js");
+    // TypedEmitter must be exported
+    if (typeof mod.TypedEmitter !== "function") {
+      throw new Error("TypedEmitter not exported");
+    }
   });
 });
+
